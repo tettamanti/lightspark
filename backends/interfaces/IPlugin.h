@@ -46,6 +46,10 @@ protected:
 	PLUGIN_TYPES pluginType;	//type of plugin of PLUGIN_TYPES
 	string pluginName;		//name of the plugin
 	string backendName;		//backend supported by the plugin
+
+	IPlugin(PLUGIN_TYPES plugin_type, string plugin_name, string backend_name):
+			pluginType(plugin_type), pluginName(plugin_name),
+			backendName(backend_name) {}
 };
 
 /*************************
