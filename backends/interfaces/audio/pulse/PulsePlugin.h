@@ -29,20 +29,9 @@
 
 using namespace std;
 
-
 class PulsePlugin : public AudioPlugin
 {
 private:
-        class AudioStream
-        {
-        public:
-                enum STREAM_STATUS { STREAM_STARTING=0, STREAM_READY=1, STREAM_DEAD=2 };
-                pa_stream *stream;
-                lightspark::IAudioDecoder *decoder;
-                PulsePlugin *manager;
-                volatile STREAM_STATUS streamStatus;
-                AudioStream ( PulsePlugin *m ) :stream ( NULL ),decoder ( NULL ),manager ( m ),streamStatus ( STREAM_STARTING ) {}
-        };
         pa_threaded_mainloop *mainLoop;
         pa_context *context;
         static void contextStatusCB ( pa_context *context, PulsePlugin *th );
@@ -53,20 +42,44 @@ private:
         void generateDevicesList ( vector<string *> *devicesList, DEVICE_TYPES desiredType ); //To populate the devices lists, devicesType must be playback or capture
         static void streamStatusCB ( pa_stream *stream, AudioStream *th );
         static void streamWriteCB ( pa_stream *stream, size_t nbytes, AudioStream *th );
-        vector<AudioStream*> streams;
+
+	vector<string *> playbackDevicesList;
+	vector<string *> captureDevicesList;
+
+	bool contextReady;
+	bool noServer;
 public:
-        PulsePlugin ( PLUGIN_TYPES init_Type = AUDIO, string init_Name = "Pulse plugin output only",
+        PulsePlugin ( string init_Name = "Pulse plugin output only",
                       string init_audiobackend = "pulse", bool init_contextReady = false,
-                      bool init_noServer = false, bool init_stopped = false );
-        uint32_t createStream ( lightspark::AudioDecoder *decoder );
+                      bool init_noServer = false, bool init_stopped = false ): 
+			AudioPlugin(init_Name, init_audiobackend, init_stopped)
+	{
+        	backendName = init_audiobackend;
+	        contextReady = init_contextReady;
+        	noServer = init_noServer;
+
+	        start();
+	}
+        AudioStream *createStream ( lightspark::AudioDecoder *decoder );
         bool Is_Connected();
-        void freeStream ( uint32_t id );
-        void fill ( uint32_t id );
+        void freeStream ( AudioStream * stream );
         void stop();
         vector<string *> *get_devicesList ( DEVICE_TYPES desiredType );
         void set_device ( string desiredDevice, DEVICE_TYPES desiredType );
-        uint32_t getPlayedTime ( uint32_t streamId );
+        uint32_t getPlayedTime ( AudioStream *stream );
+	bool isTimingAvailable() const;
         ~PulsePlugin();
+};
+
+class AudioStream
+{
+public:
+        enum STREAM_STATUS { STREAM_STARTING=0, STREAM_READY=1, STREAM_DEAD=2 };
+        pa_stream *stream;
+        lightspark::IAudioDecoder *decoder;
+        PulsePlugin *manager;
+        volatile STREAM_STATUS streamStatus;
+        AudioStream ( PulsePlugin *m ) :stream ( NULL ),decoder ( NULL ),manager ( m ),streamStatus ( STREAM_STARTING ) {}
 };
 
 #endif

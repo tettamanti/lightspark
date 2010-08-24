@@ -31,19 +31,6 @@
 using namespace lightspark;
 using namespace std;
 
-PulsePlugin::PulsePlugin ( PLUGIN_TYPES init_Type, string init_Name, string init_audiobackend,
-                           bool init_contextReady, bool init_noServer, bool init_stopped )
-{
-        pluginType = init_Type;
-        pluginName = init_Name;
-        backendName = init_audiobackend;
-        contextReady = init_contextReady;
-        noServer = init_noServer;
-        stopped = init_stopped;
-
-        start();
-}
-
 void PulsePlugin::start()
 {
         mainLoop = pa_threaded_mainloop_new();
@@ -128,30 +115,31 @@ void PulsePlugin::streamStatusCB ( pa_stream *stream, AudioStream *th )
         }
 }
 
-uint32_t PulsePlugin::getPlayedTime ( uint32_t id )
+uint32_t PulsePlugin::getPlayedTime ( AudioStream *stream )
 {
-        assert ( streams[id-1] );
+	assert ( stream );
         assert ( noServer==false );
 
-        if ( streams[id-1]->streamStatus!=AudioStream::STREAM_READY ) //The stream is not yet ready, delay upload
+        if ( stream->streamStatus!=AudioStream::STREAM_READY ) //The stream is not yet ready, delay upload
                 return 0;
-        pa_stream* stream=streams[id-1]->stream;
+        pa_stream* pastream=stream->stream;
 
         pa_threaded_mainloop_lock ( mainLoop );
         //Request updated timing info
-        pa_operation* timeUpdate=pa_stream_update_timing_info ( stream, NULL, NULL );
+        pa_operation* timeUpdate=pa_stream_update_timing_info ( pastream, NULL, NULL );
         pa_threaded_mainloop_unlock ( mainLoop );
         while ( pa_operation_get_state ( timeUpdate ) !=PA_OPERATION_DONE );
         pa_threaded_mainloop_lock ( mainLoop );
         pa_operation_unref ( timeUpdate );
 
         pa_usec_t time;
-        pa_stream_get_time ( stream, &time );
+        pa_stream_get_time ( pastream, &time );
 
         pa_threaded_mainloop_unlock ( mainLoop );
         return time/1000;
 }
 
+#if 0
 void PulsePlugin::fill ( uint32_t id )
 {
         assert ( streams[id-1] );
@@ -193,6 +181,7 @@ void PulsePlugin::fill ( uint32_t id )
                 streams[id-1]->decoder->skipAll();
         }
 }
+#endif
 
 void PulsePlugin::streamWriteCB ( pa_stream *stream, size_t askedData, AudioStream *th )
 {
@@ -234,18 +223,18 @@ void PulsePlugin::streamWriteCB ( pa_stream *stream, size_t askedData, AudioStre
         pa_stream_cork ( stream, 0, NULL, NULL ); //Start the stream, just in case it's still stopped
 }
 
-void PulsePlugin::freeStream ( uint32_t id )
+void PulsePlugin::freeStream ( AudioStream *s )
 {
         pa_threaded_mainloop_lock ( mainLoop );
-        AudioStream *s=streams[id-1];
         assert ( s );
         if ( noServer==false ) {
                 pa_stream *toDelete=s->stream;
                 pa_stream_disconnect ( toDelete );
         }
         //Do not delete the stream now, let's wait termination
-        streams[id-1]=NULL;
-        pa_threaded_mainloop_unlock ( mainLoop );
+	streams.remove(s);
+        
+	pa_threaded_mainloop_unlock ( mainLoop );
         while ( s->streamStatus!=AudioStream::STREAM_DEAD );
         pa_threaded_mainloop_lock ( mainLoop );
         if ( s->stream )
@@ -269,19 +258,15 @@ void started_notify()
         cout << "____started!!!!" << endl;
 }
 
-uint32_t PulsePlugin::createStream ( AudioDecoder *decoder )
+AudioStream *PulsePlugin::createStream ( AudioDecoder *decoder )
 {
         while ( !contextReady );
         pa_threaded_mainloop_lock ( mainLoop );
-        uint32_t index=0;
-        for ( ;index<streams.size();index++ ) {
-                if ( streams[index]==NULL )
-                        break;
-        }
         assert ( decoder->isValid() );
-        if ( index==streams.size() )
-                streams.push_back ( new AudioStream ( this ) );
-        streams[index]->decoder=decoder;
+
+	AudioStream *s = new AudioStream( this );
+        streams.push_back ( s );
+        s->decoder=decoder;
         if ( noServer==false ) {
                 pa_sample_spec ss;
                 ss.format=PA_SAMPLE_S16LE;
@@ -293,20 +278,20 @@ uint32_t PulsePlugin::createStream ( AudioDecoder *decoder )
                 attrs.tlength= ( uint32_t )-1;
                 attrs.fragsize= ( uint32_t )-1;
                 attrs.minreq= ( uint32_t )-1;
-                streams[index]->stream=pa_stream_new ( context, "AudioStream", &ss, NULL );
-                pa_stream_set_state_callback ( streams[index]->stream, ( pa_stream_notify_cb_t ) streamStatusCB, streams[index] );
-                pa_stream_set_write_callback ( streams[index]->stream, ( pa_stream_request_cb_t ) streamWriteCB, streams[index] );
-                pa_stream_set_underflow_callback ( streams[index]->stream, ( pa_stream_notify_cb_t ) underflow_notify, NULL );
-                pa_stream_set_overflow_callback ( streams[index]->stream, ( pa_stream_notify_cb_t ) overflow_notify, NULL );
-                pa_stream_set_started_callback ( streams[index]->stream, ( pa_stream_notify_cb_t ) started_notify, NULL );
-                pa_stream_connect_playback ( streams[index]->stream, NULL, &attrs,
+                s->stream=pa_stream_new ( context, "AudioStream", &ss, NULL );
+                pa_stream_set_state_callback ( s->stream, ( pa_stream_notify_cb_t ) streamStatusCB, s );
+                pa_stream_set_write_callback ( s->stream, ( pa_stream_request_cb_t ) streamWriteCB, s );
+                pa_stream_set_underflow_callback ( s->stream, ( pa_stream_notify_cb_t ) underflow_notify, NULL );
+                pa_stream_set_overflow_callback ( s->stream, ( pa_stream_notify_cb_t ) overflow_notify, NULL );
+                pa_stream_set_started_callback ( s->stream, ( pa_stream_notify_cb_t ) started_notify, NULL );
+                pa_stream_connect_playback ( s->stream, NULL, &attrs,
                                              ( pa_stream_flags ) ( PA_STREAM_START_CORKED ), NULL, NULL );
         } else {
                 //Create the stream as dead
-                streams[index]->streamStatus=AudioStream::STREAM_DEAD;
+                s->streamStatus=AudioStream::STREAM_DEAD;
         }
         pa_threaded_mainloop_unlock ( mainLoop );
-        return index+1;
+        return s;
 }
 
 void PulsePlugin::contextStatusCB ( pa_context *context, PulsePlugin *th )
@@ -337,17 +322,20 @@ void PulsePlugin::stop()
         if ( !stopped ) {
                 stopped=true;
                 pa_threaded_mainloop_lock ( mainLoop );
-                for ( uint32_t i=0;i<streams.size();i++ ) {
-                        if ( streams[i] ) {
-                                freeStream ( i+1 );
-                        }
-                }
+		for (stream_iterator it = streams.begin(); it != streams.end(); ++it) {
+			freeStream(*it);
+		}
                 pa_context_disconnect ( context );
                 pa_context_unref ( context );
                 pa_threaded_mainloop_unlock ( mainLoop );
                 pa_threaded_mainloop_stop ( mainLoop );
                 pa_threaded_mainloop_free ( mainLoop );
         }
+}
+
+bool PulsePlugin::isTimingAvailable() const
+{
+	return !noServer;
 }
 
 // Plugin factory function
