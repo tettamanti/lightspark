@@ -40,6 +40,7 @@ protected:
 	string playbackDeviceName;
 	string captureDeviceName;
 	list<AudioStream *> streams;
+	typedef list<AudioStream *>::iterator stream_iterator;
 	bool stopped;
 	
 	AudioPlugin(string plugin_name, string backend_name, bool init_stopped = false):
