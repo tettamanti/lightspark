@@ -33,10 +33,10 @@ class IPlugin
 {
 public:
 	virtual const string get_pluginName() {
-		return pluginType;
+		return pluginName;
 	};
 	virtual const PLUGIN_TYPES get_pluginType() {
-		return pluginName;
+		return pluginType;
 	}
 	virtual const string get_backendName() {
 		return backendName;
