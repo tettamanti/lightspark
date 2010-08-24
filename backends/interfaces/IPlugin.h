@@ -31,15 +31,22 @@ enum PLUGIN_TYPES { UNDEFINED=0, AUDIO, VIDEO, DECODER, ENCODER };
 
 class IPlugin
 {
-  public:
-    virtual const string get_pluginName() = 0;
-    virtual const PLUGIN_TYPES get_pluginType() = 0;
-    virtual const string get_backendName() = 0;
-    virtual ~IPlugin();
-  protected:
-    PLUGIN_TYPES pluginType;	//type of plugin of PLUGIN_TYPES
-    string pluginName;		//name of the plugin
-    string backendName;		//backend supported by the plugin
+public:
+	virtual const string get_pluginName() {
+		return pluginName;
+	};
+	
+	virtual const PLUGIN_TYPES get_pluginType() {
+		return pluginName;
+	}
+	virtual const string get_backendName() {
+		return backendName;
+	}
+	virtual ~IPlugin() {}
+protected:
+	PLUGIN_TYPES pluginType;	//type of plugin of PLUGIN_TYPES
+	string pluginName;		//name of the plugin
+	string backendName;		//backend supported by the plugin
 };
 
 /*************************
