@@ -23,28 +23,43 @@
 
 #include "../../../compat.h"
 #include "../../decoder.h"
-#include "IAudioPlugin.h"
+#include "../IPlugin.h"
 #include <iostream>
 
-using namespace std;
+using std::string;
+using std::list;
+
+class AudioStream; //Forward declaration, it will be implemented per plugin
 
 /**********************
 Abstract class for audio plugin implementation
 ***********************/
-class AudioPlugin : public IAudioPlugin
+class AudioPlugin : public IPlugin
 {
+protected:
+	string playbackDeviceName;
+	string captureDeviceName;
+	list<AudioStream *> streams;
+	bool stopped;
+	
+	AudioPlugin(string plugin_name, string backend_name, bool init_stopped = false):
+			IPlugin(AUDIO, plugin_name, backend_name), stopped(init_stopped) {}
+
 public:
-        AudioPlugin ( PLUGIN_TYPES init_Type = AUDIO, string init_Name = "generic audio plugin",
-                      string init_backend = "undefined", bool init_contextReady = false,
-                      bool init_noServer = false, bool init_stopped = false );
-        const string get_backendName();
-        bool get_serverStatus();
-        const PLUGIN_TYPES get_pluginType();
-        const string get_pluginName();
-        bool Is_ContextReady();
-        bool Is_Stopped();
-        bool isTimingAvailable() const;
-        virtual ~AudioPlugin();
+	enum DEVICE_TYPES { PLAYBACK, CAPTURE };
+
+	virtual bool isStopped() const {
+		return stopped;
+	}
+	virtual bool isTimingAvailable() const = 0;
+
+	virtual AudioStream *createStream(lightspark::AudioDecoder *decoder) = 0;
+	virtual void freeStream(AudioStream *stream) = 0;
+	virtual uint32_t getPlayedTime(AudioStream *stream) = 0;
+
+	virtual void stop() = 0;
+
+	virtual ~AudioPlugin() { };
 };
 
 #endif

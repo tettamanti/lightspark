@@ -62,36 +62,38 @@ AudioManager::AudioManager ( PluginManager *sharedPluginManager )
 
 void AudioManager::fillPlugin ( uint32_t id )
 {
+#if 0
         if ( oAudioPlugin != NULL ) {
                 oAudioPlugin->fill ( id );
         } else {
                 LOG ( LOG_ERROR,_ ( "No audio plugin loaded" ) );
         }
+#endif
 }
 
-void AudioManager::freeStreamPlugin ( uint32_t id )
+void AudioManager::freeStreamPlugin ( AudioStream *stream )
 {
         if ( oAudioPlugin != NULL ) {
-                oAudioPlugin->freeStream ( id );
+                oAudioPlugin->freeStream ( stream );
         } else {
                 LOG ( LOG_ERROR,_ ( "No audio plugin loaded" ) );
         }
 }
 
-uint32_t AudioManager::createStreamPlugin ( AudioDecoder *decoder )
+AudioStream *AudioManager::createStreamPlugin ( AudioDecoder *decoder )
 {
         if ( oAudioPlugin != NULL ) {
                 return oAudioPlugin->createStream ( decoder );
         } else {
                 LOG ( LOG_ERROR,_ ( "No audio plugin loaded" ) );
-                return -1;
+                return NULL;
         }
 }
 
-uint32_t AudioManager::getPlayedTimePlugin ( uint32_t streamId )
+uint32_t AudioManager::getPlayedTimePlugin ( AudioStream *stream )
 {
         if ( oAudioPlugin != NULL ) {
-                return oAudioPlugin->getPlayedTime ( streamId );
+                return oAudioPlugin->getPlayedTime ( stream );
         } else {
                 LOG ( LOG_ERROR,_ ( "getPlayedTimePlugin: No audio plugin loaded" ) );
                 return 0;
@@ -139,7 +141,7 @@ void AudioManager::load_audioplugin ( string selected_backend )
 {
         LOG ( LOG_NO_INFO,_ ( ( ( string ) ( "the selected backend is: " + selected_backend ) ).c_str() ) );
         release_audioplugin();
-        oAudioPlugin = static_cast<IAudioPlugin *> ( pluginManager->get_plugin ( selected_backend ) );
+        oAudioPlugin = static_cast<AudioPlugin *> ( pluginManager->get_plugin ( selected_backend ) );
 
         if ( oAudioPlugin == NULL ) {
                 LOG ( LOG_ERROR,_ ( "Could not load the audiobackend" ) );

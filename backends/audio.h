@@ -28,7 +28,7 @@
 #include <boost/filesystem.hpp>
 
 #include "pluginmanager.h"
-#include "interfaces/audio/IAudioPlugin.h"
+#include "interfaces/audio/AudioPlugin.h"
 
 using namespace std;
 using namespace boost::filesystem;
@@ -44,7 +44,7 @@ class AudioManager
 {
 private:
         vector<string *>audioplugins_list;
-        IAudioPlugin *oAudioPlugin;
+        AudioPlugin *oAudioPlugin;
         string selectedAudioBackend;
         void load_audioplugin ( string selected_backend );
         void release_audioplugin();
@@ -53,12 +53,12 @@ private:
 
 public:
         AudioManager ( PluginManager *sharePluginManager );
-        uint32_t createStreamPlugin ( AudioDecoder *decoder );
-        void freeStreamPlugin ( uint32_t id );
+        AudioStream *createStreamPlugin ( AudioDecoder *decoder );
+        void freeStreamPlugin ( AudioStream *stream );
         void fillPlugin ( uint32_t id );
         void stopPlugin();
         bool isTimingAvailablePlugin() const;
-        uint32_t getPlayedTimePlugin ( uint32_t streamId );
+        uint32_t getPlayedTimePlugin ( AudioStream * );
         void set_audiobackend ( string desired_backend );
         void get_audioBackendsList();
         void refresh_audioplugins_list();
