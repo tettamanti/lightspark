@@ -60,17 +60,6 @@ AudioManager::AudioManager ( PluginManager *sharedPluginManager )
         set_audiobackend ( DesiredAudio );
 }
 
-void AudioManager::fillPlugin ( uint32_t id )
-{
-#if 0
-        if ( oAudioPlugin != NULL ) {
-                oAudioPlugin->fill ( id );
-        } else {
-                LOG ( LOG_ERROR,_ ( "No audio plugin loaded" ) );
-        }
-#endif
-}
-
 void AudioManager::freeStreamPlugin ( AudioStream *stream )
 {
         if ( oAudioPlugin != NULL ) {
@@ -87,16 +76,6 @@ AudioStream *AudioManager::createStreamPlugin ( AudioDecoder *decoder )
         } else {
                 LOG ( LOG_ERROR,_ ( "No audio plugin loaded" ) );
                 return NULL;
-        }
-}
-
-uint32_t AudioManager::getPlayedTimePlugin ( AudioStream *stream )
-{
-        if ( oAudioPlugin != NULL ) {
-                return oAudioPlugin->getPlayedTime ( stream );
-        } else {
-                LOG ( LOG_ERROR,_ ( "getPlayedTimePlugin: No audio plugin loaded" ) );
-                return 0;
         }
 }
 

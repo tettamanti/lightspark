@@ -29,7 +29,12 @@
 using std::string;
 using std::list;
 
-class AudioStream; //Forward declaration, it will be implemented per plugin
+class AudioStream {
+public:
+	virtual uint32_t getPlayedTime() = 0;
+	virtual void fill() = 0;
+	virtual ~AudioStream() {};
+};
 
 /**********************
 Abstract class for audio plugin implementation
@@ -56,7 +61,6 @@ public:
 
 	virtual AudioStream *createStream(lightspark::AudioDecoder *decoder) = 0;
 	virtual void freeStream(AudioStream *stream) = 0;
-	virtual uint32_t getPlayedTime(AudioStream *stream) = 0;
 
 	virtual void stop() = 0;
 

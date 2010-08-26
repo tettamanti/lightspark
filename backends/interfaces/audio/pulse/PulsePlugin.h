@@ -29,6 +29,8 @@
 
 using namespace std;
 
+class PulseAudioStream;
+
 class PulsePlugin : public AudioPlugin
 {
 private:
@@ -40,8 +42,8 @@ private:
         static void captureListCB ( pa_context *context, const pa_source_info *list, int eol, void *th );
         void addDeviceToList ( vector<string *> *devicesList, string *deviceName );
         void generateDevicesList ( vector<string *> *devicesList, DEVICE_TYPES desiredType ); //To populate the devices lists, devicesType must be playback or capture
-        static void streamStatusCB ( pa_stream *stream, AudioStream *th );
-        static void streamWriteCB ( pa_stream *stream, size_t nbytes, AudioStream *th );
+        static void streamStatusCB ( pa_stream *stream, PulseAudioStream *th );
+        static void streamWriteCB ( pa_stream *stream, size_t nbytes, PulseAudioStream *th );
 
 	vector<string *> playbackDevicesList;
 	vector<string *> captureDevicesList;
@@ -66,12 +68,23 @@ public:
         void stop();
         vector<string *> *get_devicesList ( DEVICE_TYPES desiredType );
         void set_device ( string desiredDevice, DEVICE_TYPES desiredType );
-        uint32_t getPlayedTime ( AudioStream *stream );
 	bool isTimingAvailable() const;
+
+	void pulseLock() {
+		pa_threaded_mainloop_lock ( mainLoop );
+	}
+	void pulseUnlock() {
+		pa_threaded_mainloop_unlock ( mainLoop );
+	}
+
+	bool serverAvailable() const {
+		return !noServer;
+	}
+
         ~PulsePlugin();
 };
 
-class AudioStream
+class PulseAudioStream: public AudioStream
 {
 public:
         enum STREAM_STATUS { STREAM_STARTING=0, STREAM_READY=1, STREAM_DEAD=2 };
@@ -79,7 +92,10 @@ public:
         lightspark::IAudioDecoder *decoder;
         PulsePlugin *manager;
         volatile STREAM_STATUS streamStatus;
-        AudioStream ( PulsePlugin *m ) :stream ( NULL ),decoder ( NULL ),manager ( m ),streamStatus ( STREAM_STARTING ) {}
+        PulseAudioStream ( PulsePlugin *m ) :stream ( NULL ),decoder ( NULL ),manager ( m ),streamStatus ( STREAM_STARTING ) {}
+
+	uint32_t getPlayedTime ();
+	void fill ();
 };
 
 #endif
