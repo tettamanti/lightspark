@@ -55,7 +55,7 @@ AudioManager::AudioManager ( PluginManager *sharedPluginManager )
 	selectedAudioBackend = "";
 	oAudioPlugin = NULL;
 //	  string DesiredAudio = get_audioConfig(); //Looks for the audio selected in the user's config
-	string DesiredAudio = "pulse";
+	string DesiredAudio = "alsa";
 	set_audiobackend ( DesiredAudio );
 }
 
